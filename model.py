@@ -5,6 +5,58 @@ from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
 from keras.optimizers import Adam
 from keras.utils import plot_model
 from keras.preprocessing.image import ImageDataGenerator
+import imread
+import cv2
+import shutil
+
+
+
+def image_processing(train):
+    root = train
+    frames = os.listdir(root)
+    images = []
+    for frame in frames:
+        image = imread(os.path.join(root, frame))
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        med_filt = cv2.medianBlur(gray, 5)
+        guss_filt = cv2.GaussianBlur(gray,(9,9), 0)
+        histo = cv2.equalizeHist(gray)
+        edge = cv2.Canny(gray,100,200)
+        images.append(gray)
+        images.append(med_filt)
+        images.append(guss_filt)
+        images.append(histo)
+        images.append(edge)
+    
+    images_array = np.array(images)
+
+    return images_array
+
+def create_folder(txt_file, output_folder):
+    with open(txt_file) as f:
+        lines = f.readlines()
+        file_paths = []
+        labels = []
+    for line in lines:
+        line = line.strip().split()
+        file_paths.append(line[0])
+        labels.append(int(line[1]))
+    y = np.array(labels)
+    
+    for label in range(8):
+        folder_name = f'label_{label}'
+        os.makedirs(os.path.join(output_folder, folder_name), exist_ok=True)
+
+    for idx in range(len(file_paths)):
+        label = y[idx]
+        source_path = file_paths[idx]
+        destination_folder = os.path.join(output_folder, f'label_{label}')
+        destination_path = os.path.join(destination_folder, os.path.basename(source_path))
+        shutil.copy(source_path, destination_path)
+
+    # Return the path to the main folder 'train'
+    return output_folder
+
 
 def generator(train_images, test_images):
     root = "train" 
@@ -86,18 +138,23 @@ def model(num_classes, learning_rate):
 
 
 def main():
-    train_images_path = input("Path to training images: ")
+    train_images_path = input("Path to training images")
     test_images_path = input("Path to test_images: ")
+    output_folder = "processed_images"
 
     num_classes = int(input("Enter number of classes: "))
     learning_rate = float(input("Learning rate: "))
 
-    training_set, test_set, validation_set = generator(train_images_path, test_images_path)
+    train_images_path = create_folder(train_images_path, output_folder)
 
-    your_model = model(num_classes, learning_rate)
+    processed_images = image_processing(train_images_path)
+
+    training_set, test_set, validation_set = generator(output_folder, test_images_path)
+
+    num_classes_training_set = num_classes
+    your_model = model(num_classes_training_set, learning_rate)
     history = your_model.fit(training_set, epochs=100, validation_data=validation_set)
 
 if __name__ == "__main__":
     main()
-
 
