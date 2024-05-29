@@ -1,5 +1,5 @@
 # BloodCellImageClassifier
-Machine Learning model to predict classification of blood cell types
+Automated Classification of Blood Cell Images Through Machine Learning Techniques
 
 
 
